@@ -1,2 +1,2 @@
-# data-analysis-pipeline
-Basic data analysis pipeline
+# CMPSCI-645
+All homework assignments for CMPSCI-645
