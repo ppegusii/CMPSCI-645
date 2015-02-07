@@ -57,4 +57,4 @@ def main(sourceFileName):
   xml.sax.parse(source, DBLPContentHandler())
  
 if __name__ == "__main__":
-  main("/path/to/dblp.xml")
+  main("../../data/dblp.xml")
