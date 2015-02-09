@@ -52,19 +52,20 @@ CREATE TABLE Authored(
 );
 
 -- 2.2
-SELECT p, COUNT(*)
+SELECT p AS publication_type, COUNT(*)
 	FROM pub
 	GROUP BY p;
---        p       |  count  
--- ---------------+---------
---  www           | 1521335
---  incollection  |   29898
---  article       | 1235495
---  phdthesis     |    6955
---  book          |   11398
---  inproceedings | 1562008
---  proceedings   |   25625
---  mastersthesis |       9
+--  publication_type |  count  
+-- ------------------+---------
+--  www              | 1521335
+--  incollection     |   29898
+--  article          | 1235495
+--  phdthesis        |    6955
+--  book             |   11398
+--  inproceedings    | 1562008
+--  proceedings      |   25625
+--  mastersthesis    |       9
+
 BEGIN;
 	SELECT DISTINCT pub.p AS pt, field.p AS ft INTO pub_field_exist
 		FROM pub, field
@@ -89,5 +90,12 @@ BEGIN;
 	DROP TABLE IF EXISTS field_type;
 	DROP TABLE IF EXISTS pub_field_exist;
 COMMIT;
+--  field_name 
+-- ------------
+--  ee
+--  author
+--  year
+--  url
+--  title
 CREATE UNIQUE INDEX pub_k_idx ON Pub(k);
 CREATE INDEX field_k_idx ON Field(k);
