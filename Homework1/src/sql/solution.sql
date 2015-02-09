@@ -16,7 +16,7 @@ CREATE TABLE Author(
 );
 CREATE TABLE Publication(
 	pubid SERIAL PRIMARY KEY,
-	pubkey TEXT UNIQUE, -- unsure if this should allow NULL
+	pubkey TEXT UNIQUE NOT NULL,
 	title TEXT NOT NULL,
 	year INTEGER NOT NULL
 );
@@ -65,31 +65,71 @@ SELECT p AS publication_type, COUNT(*)
 --  inproceedings    | 1562008
 --  proceedings      |   25625
 --  mastersthesis    |       9
-
-BEGIN;
-	SELECT DISTINCT pub.p AS pt, field.p AS ft INTO pub_field_exist
-		FROM pub, field
-		WHERE pub.k = field.k;
-	SELECT DISTINCT field.p AS ft INTO field_type
-		FROM field;
-	SELECT DISTINCT pub.p AS pt INTO pub_type
-		FROM pub;
-	SELECT field_type.ft AS field_name
-		FROM field_type
-		WHERE NOT EXISTS	((
-								SELECT pub_type.pt, field_type.ft
-									FROM pub_type
+/*
+WITH	pub_field_exist AS	(
+								SELECT DISTINCT pub.p AS pt, field.p AS ft
+									FROM pub, field
+									WHERE pub.k = field.k
+							),
+		field_type AS		(
+								SELECT DISTINCT field.p AS ft
+									FROM field
+							),
+		pub_type AS			(
+								SELECT DISTINCT pub.p AS pt
+									FROM pub
 							)
-							EXCEPT
-							(
-								SELECT *
-									FROM pub_field_exist
-									WHERE pub_field_exist.ft = field_type.ft
-							));
-	DROP TABLE IF EXISTS pub_type;
-	DROP TABLE IF EXISTS field_type;
-	DROP TABLE IF EXISTS pub_field_exist;
-COMMIT;
+	SELECT field_type.ft AS field_name
+	FROM field_type
+	WHERE NOT EXISTS	((
+							SELECT pub_type.pt, field_type.ft
+								FROM pub_type
+						)
+						EXCEPT
+						(
+							SELECT *
+								FROM pub_field_exist
+								WHERE pub_field_exist.ft = field_type.ft
+						));
+-- This is faster than the direct query below. The below query queries for
+-- all field types twice.
+*/
+SELECT field_in_all_pub.ft as field_name
+	FROM	(
+				(
+					--all fields
+					SELECT DISTINCT field.p AS ft
+						FROM field
+				)
+				EXCEPT
+				(
+					--field types not having a relationship with all pub types
+					SELECT pub_field_not_in_cross.ft AS ft
+						FROM	(
+									(
+										--cross product of all pub types and all field types
+										SELECT *
+											FROM	(
+														--all pub types
+														SELECT DISTINCT pub.p AS pt
+															FROM pub 
+													) AS pub_type,
+													(
+														--all field types
+														SELECT DISTINCT field.p AS ft
+															FROM field
+													) AS field_type
+									)
+									EXCEPT
+									(
+										--existing pub type field type relationships
+										SELECT DISTINCT pub.p AS pt, field.p AS ft
+											FROM pub, field
+											WHERE pub.k = field.k
+									)
+								) AS pub_field_not_in_cross
+				)
+			) AS field_in_all_pub;
 --  field_name 
 -- ------------
 --  ee
@@ -98,4 +138,6 @@ COMMIT;
 --  url
 --  title
 CREATE UNIQUE INDEX pub_k_idx ON Pub(k);
+CREATE INDEX pub_p_idx ON Pub(p);
 CREATE INDEX field_k_idx ON Field(k);
+CREATE INDEX field_p_idx ON Field(p);
