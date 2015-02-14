@@ -16,32 +16,38 @@ CREATE TABLE Author(
 );
 CREATE TABLE Publication(
 	pubid SERIAL PRIMARY KEY,
-	pubkey TEXT UNIQUE NOT NULL,
+	--pubkey TEXT UNIQUE NOT NULL,
+	pubkey TEXT NOT NULL,
 	title TEXT NOT NULL,
 	year INTEGER NOT NULL
 );
+CREATE UNIQUE INDEX publication_pubkey_idx ON Publication(pubkey);
 CREATE TABLE Article(
-	pubid INTEGER NOT NULL REFERENCES Publication(pubid),
+	--pubid INTEGER NOT NULL REFERENCES Publication(pubid),
+	pubid INTEGER NOT NULL,
 	journal TEXT NOT NULL,
 	month INTEGER NOT NULL,
 	volume INTEGER NOT NULL,
 	number INTEGER NOT NULL
 );
 CREATE TABLE Book(
-	pubid INTEGER NOT NULL REFERENCES Publication(pubid),
+	--pubid INTEGER NOT NULL REFERENCES Publication(pubid),
+	pubid INTEGER NOT NULL,
 	publisher TEXT NOT NULL,
 	isbn TEXT NOT NULL
 );
 CREATE UNIQUE INDEX book_pubid_idx ON Book(pubid);
 CREATE TABLE Incollection(
-	pubid INTEGER NOT NULL REFERENCES Publication(pubid),
+	--pubid INTEGER NOT NULL REFERENCES Publication(pubid),
+	pubid INTEGER NOT NULL,
 	booktitle TEXT NOT NULL,
 	publisher TEXT NOT NULL,
 	isbn TEXT NOT NULL
 );
 CREATE UNIQUE INDEX incollection_pubid_idx ON Incollection(pubid);
 CREATE TABLE Inproceedings(
-	pubid INTEGER NOT NULL REFERENCES Publication(pubid),
+	--pubid INTEGER NOT NULL REFERENCES Publication(pubid),
+	pubid INTEGER NOT NULL,
 	booktitle TEXT NOT NULL,
 	editor TEXT NOT NULL
 );
@@ -123,7 +129,7 @@ SELECT field_in_all_pub.ft as field_name
 									EXCEPT
 									(
 										--existing pub type field type relationships
-										SELECT DISTINCT pub.p AS pt, field.p AS ft
+										SELECT pub.p AS pt, field.p AS ft
 											FROM pub, field
 											WHERE pub.k = field.k
 									)
@@ -139,5 +145,19 @@ SELECT field_in_all_pub.ft as field_name
 --  title
 CREATE UNIQUE INDEX pub_k_idx ON Pub(k);
 CREATE INDEX pub_p_idx ON Pub(p);
-CREATE INDEX field_k_idx ON Field(k);
-CREATE INDEX field_p_idx ON Field(p);
+CREATE INDEX field_k_idx ON Field(k); -- I don't think this is necessary, but I'll have to test.
+CREATE INDEX field_p_idx ON Field(p); -- I don't think this is necessary, but I'll have to test.
+
+--two queries to load Author and deal with multiple homepages.
+--Note that this query selects all authors regardless of their publication types.
+--	So it should have authors that do not correspond to a publication in PubData.
+--I don't know if either is faster, but the second one has clearer intentions
+--I still need to deal with authors that have a middle initial in the calls to both SUBSTRING and REPLACE
+SELECT DISTINCT ON (x.v) x.v AS author, y.v AS url
+	FROM field AS x, field AS y
+	WHERE x.p = 'author' AND y.k = 'homepages/' || LOWER(TRIM(LEADING ' ' FROM SUBSTRING(x.v FROM ' [A-Z]'))) || '/' || REPLACE(x.v, ' ', '') AND y.p = 'url'
+	ORDER BY x.v;
+SELECT x.v AS author, MAX(y.v) AS url
+	FROM field AS x, field AS y
+	WHERE x.p = 'author' AND y.k = 'homepages/' || LOWER(TRIM(LEADING ' ' FROM SUBSTRING(x.v FROM ' [A-Z]'))) || '/' || REPLACE(x.v, ' ', '') AND y.p = 'url'
+	GROUP BY x.v;
