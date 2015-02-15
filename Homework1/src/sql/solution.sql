@@ -151,7 +151,7 @@ CREATE INDEX field_p_idx ON Field(p); -- I don't think this is necessary, but I'
 --two queries to load Author and deal with multiple homepages.
 --Note that this query selects all authors regardless of their publication types.
 --	So it should have authors that do not correspond to a publication in PubData.
---I don't know if either is faster, but the second has clearer intentions
+--I don't know if either is faster, but the first has clearer intentions
 --I still need to deal with authors that have a middle initial in the calls to both SUBSTRING and REPLACE
 SELECT DISTINCT ON (x.v) x.v AS author, y.v AS url
 	FROM field AS x, field AS y
