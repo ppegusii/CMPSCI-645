@@ -100,6 +100,7 @@ WITH	pub_field_exist AS	(
 -- This is faster than the direct query below. The below query queries for
 -- all field types twice.
 */
+/*
 SELECT field_in_all_pub.ft as field_name
 	FROM	(
 				(
@@ -136,6 +137,7 @@ SELECT field_in_all_pub.ft as field_name
 								) AS pub_field_not_in_cross
 				)
 			) AS field_in_all_pub;
+*/
 --  field_name 
 -- ------------
 --  ee
@@ -153,11 +155,67 @@ CREATE INDEX field_p_idx ON Field(p); -- I don't think this is necessary, but I'
 --	So it should have authors that do not correspond to a publication in PubData.
 --I don't know if either is faster, but the first has clearer intentions
 --I still need to deal with authors that have a middle initial in the calls to both SUBSTRING and REPLACE
-SELECT DISTINCT ON (x.v) x.v AS author, y.v AS url
+/*
+INSERT INTO Author (name,homepage) SELECT rawAuthor.name, rawAuthor.homepage FROM (SELECT DISTINCT ON (x.v) x.v AS name, y.v AS homepage
 	FROM field AS x, field AS y
 	WHERE x.p = 'author' AND y.k = 'homepages/' || LOWER(TRIM(LEADING ' ' FROM SUBSTRING(x.v FROM ' [A-Z]'))) || '/' || REPLACE(x.v, ' ', '') AND y.p = 'url'
-	ORDER BY x.v;
+	ORDER BY x.v) AS rawAuthor;
+*/
+/*
 SELECT x.v AS author, MAX(y.v) AS url
 	FROM field AS x, field AS y
 	WHERE x.p = 'author' AND y.k = 'homepages/' || LOWER(TRIM(LEADING ' ' FROM SUBSTRING(x.v FROM ' [A-Z]'))) || '/' || REPLACE(x.v, ' ', '') AND y.p = 'url'
 	GROUP BY x.v;
+*/
+DROP TABLE IF EXISTS rawArticle;
+DROP TABLE IF EXISTS rawBook;
+DROP TABLE IF EXISTS rawIncollection;
+DROP TABLE IF EXISTS rawInproceedings;
+DROP TABLE IF EXISTS rawTitle;
+DROP TABLE IF EXISTS rawYear;
+DROP TABLE IF EXISTS rawMonth;
+DROP TABLE IF EXISTS rawVolume;
+DROP TABLE IF EXISTS rawNumber;
+DROP TABLE IF EXISTS rawPublisher;
+DROP TABLE IF EXISTS rawISBN;
+DROP TABLE IF EXISTS rawBookTitle;
+DROP TABLE IF EXISTS rawEditor;
+CREATE TABLE rawArticle AS SELECT *
+	FROM pub
+	WHERE p = 'article';
+CREATE TABLE rawBook AS SELECT *
+	FROM pub
+	WHERE p = 'book';
+CREATE TABLE rawIncollection AS SELECT *
+	FROM pub
+	WHERE p = 'incollection';
+CREATE TABLE rawInproceedings AS SELECT *
+	FROM pub
+	WHERE p = 'inproceedings';
+CREATE TABLE rawTitle AS SELECT k AS pubkey, v AS title
+	FROM field
+	WHERE p = 'title';
+CREATE TABLE rawYear AS SELECT k AS pubkey, v AS year
+	FROM field
+	WHERE p = 'year';
+CREATE TABLE rawMonth AS SELECT k AS pubkey, v AS month
+	FROM field
+	WHERE p = 'month';
+CREATE TABLE rawVolume AS SELECT k AS pubkey, v AS volume
+	FROM field
+	WHERE p = 'volume';
+CREATE TABLE rawNumber AS SELECT k AS pubkey, v AS num
+	FROM field
+	WHERE p = 'number';
+CREATE TABLE rawPublisher AS SELECT k AS pubkey, v AS publisher
+	FROM field
+	WHERE p = 'publisher';
+CREATE TABLE rawISBN AS SELECT k AS pubkey, v AS isbn
+	FROM field
+	WHERE p = 'isbn';
+CREATE TABLE rawBookTitle AS SELECT k AS pubkey, v AS booktitle
+	FROM field
+	WHERE p = 'booktitle';
+CREATE TABLE rawEditor AS SELECT k AS pubkey, v AS editor
+	FROM field
+	WHERE p = 'editor';
