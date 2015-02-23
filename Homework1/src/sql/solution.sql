@@ -6,21 +6,24 @@ DROP TABLE IF EXISTS Incollection;
 DROP TABLE IF EXISTS Book;
 DROP TABLE IF EXISTS Article;
 DROP TABLE IF EXISTS Publication;
-DROP TABLE IF EXISTS Author;
+--DROP TABLE IF EXISTS Author;
 
 -- create tables
+/*
 CREATE TABLE Author(
 	id SERIAL PRIMARY KEY,
 	name TEXT NOT NULL,
 	homepage TEXT
 );
+*/
 CREATE TABLE Publication(
 	pubid SERIAL PRIMARY KEY,
 	--pubkey TEXT UNIQUE NOT NULL,
 	pubkey TEXT NOT NULL,
-	title TEXT NOT NULL,
+	title TEXT,
 	year INTEGER
 );
+--unique now or later?
 CREATE UNIQUE INDEX publication_pubkey_idx ON Publication(pubkey);
 CREATE TABLE Article(
 	--pubid INTEGER NOT NULL REFERENCES Publication(pubid),
@@ -152,11 +155,9 @@ CREATE INDEX pub_p_idx ON Pub(p);
 --CREATE INDEX field_k_idx ON Field(k); -- I don't think this is necessary, but I'll have to test.
 --CREATE INDEX field_p_idx ON Field(p); -- I don't think this is necessary, but I'll have to test.
 
---two queries to load Author and deal with multiple homepages.
---I don't know if either is faster, but the first has clearer intentions
---I still need to deal with authors that have a middle initial in the calls to both SUBSTRING and REPLACE
+--3
 /*
---Takes too long!
+--Redo and test
 INSERT INTO Author (name,homepage) (
 	SELECT DISTINCT ON (x.v) x.v AS name, y.v AS homepage
 		FROM field AS x, field AS y, pub AS p
@@ -166,15 +167,8 @@ INSERT INTO Author (name,homepage) (
 );
 */
 /*
-INSERT INTO Author (name,homepage) (
-	SELECT DISTINCT ON (x.v) x.v AS name, y.v AS homepage
-		FROM field AS x, field AS y, pub AS p
-		WHERE x.p = 'author' AND y.k = 'homepages/' || LOWER(TRIM(LEADING ' ' FROM SUBSTRING(SUBSTRING(x.v FROM ' [A-Za-z][A-Za-z]*$') FROM ' [A-Za-z]'))) || '/' || REPLACE(REPLACE(x.v, ' ', ''), '.', '')
-			AND y.p = 'url' AND x.k = p.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings')
-		ORDER BY x.v
-);
-*/
---this is the one!
+--redo one with LIKE like this and test
+--move non-joining constraints to where clause
 INSERT INTO Author (name,homepage) (
 	SELECT DISTINCT ON (x.v) x.v AS name, y.v AS homepage
 		FROM
@@ -182,20 +176,7 @@ INSERT INTO Author (name,homepage) (
 			JOIN pub AS p ON (x.k = p.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings'))
 		ORDER BY x.v
 );
-/*
-SELECT x.v AS author, MAX(y.v) AS url
-	FROM field AS x, field AS y
-	WHERE x.p = 'author' AND y.k = 'homepages/' || LOWER(TRIM(LEADING ' ' FROM SUBSTRING(x.v FROM ' [A-Z]'))) || '/' || REPLACE(x.v, ' ', '') AND y.p = 'url'
-	GROUP BY x.v;
 */
-/*
---Not needed anymore
-DROP TABLE IF EXISTS rawArticle;
-DROP TABLE IF EXISTS rawBook;
-DROP TABLE IF EXISTS rawIncollection;
-DROP TABLE IF EXISTS rawInproceedings;
-*/
---TODO drop indices
 --DROP INDEX IF EXISTS rawTitle_pubkey_idx;
 --DROP INDEX IF EXISTS rawYear_pubkey_idx;
 --DROP INDEX IF EXISTS rawMonth_pubkey_idx;
@@ -215,21 +196,6 @@ DROP TABLE IF EXISTS rawInproceedings;
 --DROP TABLE IF EXISTS rawISBN;
 --DROP TABLE IF EXISTS rawBookTitle;
 --DROP TABLE IF EXISTS rawEditor;
-/*
---Not needed anymore
-CREATE TABLE rawArticle AS SELECT DISTINCT ON (k) k AS pubkey, p AS pubtype
-	FROM pub
-	WHERE p = 'article';
-CREATE TABLE rawBook AS SELECT DISTINCT ON (k) k AS pubkey, p AS pubtype
-	FROM pub
-	WHERE p = 'book';
-CREATE TABLE rawIncollection AS SELECT DISTINCT ON (k) k AS pubkey, p AS pubtype
-	FROM pub
-	WHERE p = 'incollection';
-CREATE TABLE rawInproceedings AS SELECT DISTINCT ON (k) k AS pubkey, p AS pubtype
-	FROM pub
-	WHERE p = 'inproceedings';
-*/
 /*
 CREATE TABLE rawTitle AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS title
 	FROM field AS f, pub AS p
@@ -272,18 +238,20 @@ CREATE TABLE rawEditor AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS editor
 	WHERE f.p = 'editor' AND p.k = f.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings');
 CREATE INDEX rawEditor_pubkey_idx ON rawEditor(pubkey);
 */
+/*
 INSERT INTO Publication (pubkey, title, year) (
 	SELECT t.pubkey, t.title, CAST(y.year AS INT)
 		FROM rawTitle AS t, rawYear AS y
 		WHERE t.pubkey = y.pubkey
 );
+*/
 INSERT INTO Publication (pubkey, title, year) (
-	SELECT p.pubkey, t.v, CAST(y.year AS INT)
-		FROM pub AS p LEFT OUTER JOIN field as t ON (p.k = t.k AND t.p = 'title')
-			LEFT OUTER JOIN field AS y ON (p.k = y.k AND y.p = 'year'
-		FROM rawTitle AS t, rawYear AS y
-		WHERE t.pubkey = y.pubkey
+	SELECT p.k, title.v, CAST(year.v AS INT)
+		FROM pub AS p LEFT OUTER JOIN field as title ON (p.k = title.k AND title.p = 'title')
+			LEFT OUTER JOIN field AS year ON (p.k = year.k AND year.p = 'year')
+		WHERE  p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p ='inproceedings'
 );
+/*
 INSERT INTO Article (pubid, journal, month, volume, number) (
 	SELECT p.pubid, j.journal, m.month, v.volume, n.number
 		FROM Publication AS p, rawJournal AS j, rawMonth AS m, rawVolume AS v, rawNumber AS n, pub
@@ -304,3 +272,4 @@ INSERT INTO Inproceedings (pubid, booktitle, editor) (
 		FROM Publication AS p, rawBookTitle as b, rawEditor AS e, pub
 		WHERE p.pubkey = b.pubkey AND p.pubkey = e.pubkey AND p.pubkey = pub.k AND pub.p = 'inproceedings'
 );
+*/
