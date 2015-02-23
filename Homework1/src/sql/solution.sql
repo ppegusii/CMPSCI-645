@@ -33,6 +33,7 @@ CREATE TABLE Article(
 	volume TEXT,
 	number TEXT
 );
+CREATE UNIQUE INDEX article_pubid_idx ON Article(pubid);
 CREATE TABLE Book(
 	--pubid INTEGER NOT NULL REFERENCES Publication(pubid),
 	pubid INTEGER NOT NULL,
@@ -177,99 +178,40 @@ INSERT INTO Author (name,homepage) (
 		ORDER BY x.v
 );
 */
---DROP INDEX IF EXISTS rawTitle_pubkey_idx;
---DROP INDEX IF EXISTS rawYear_pubkey_idx;
---DROP INDEX IF EXISTS rawMonth_pubkey_idx;
---DROP INDEX IF EXISTS rawVolume_pubkey_idx;
---DROP INDEX IF EXISTS rawNumber_pubkey_idx;
---DROP INDEX IF EXISTS rawPublisher_pubkey_idx;
---DROP INDEX IF EXISTS rawISBN_pubkey_idx;
---DROP INDEX IF EXISTS rawBookTitle_pubkey_idx;
---DROP INDEX IF EXISTS rawEditor_pubkey_idx;
-
---DROP TABLE IF EXISTS rawTitle;
---DROP TABLE IF EXISTS rawYear;
---DROP TABLE IF EXISTS rawMonth;
---DROP TABLE IF EXISTS rawVolume;
---DROP TABLE IF EXISTS rawNumber;
---DROP TABLE IF EXISTS rawPublisher;
---DROP TABLE IF EXISTS rawISBN;
---DROP TABLE IF EXISTS rawBookTitle;
---DROP TABLE IF EXISTS rawEditor;
-/*
-CREATE TABLE rawTitle AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS title
-	FROM field AS f, pub AS p
-	WHERE f.p = 'title' AND p.k = f.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings');
-CREATE INDEX rawTitle_pubkey_idx ON rawTitle(pubkey);
-CREATE TABLE rawYear AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS year
-	FROM field AS f, pub AS p
-	WHERE f.p = 'year' AND p.k = f.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings');
-CREATE INDEX rawYear_pubkey_idx ON rawYear(pubkey);
-CREATE TABLE rawJournal AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS journal
-	FROM field AS f, pub AS p
-	WHERE f.p = 'journal' AND p.k = f.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings');
-CREATE INDEX rawJournal_pubkey_idx ON rawJournal(pubkey);
-CREATE TABLE rawMonth AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS month
-	FROM field AS f, pub AS p
-	WHERE f.p = 'month' AND p.k = f.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings');
-CREATE INDEX rawMonth_pubkey_idx ON rawMonth(pubkey);
-CREATE TABLE rawVolume AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS volume
-	FROM field AS f, pub AS p
-	WHERE f.p = 'volume' AND p.k = f.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings');
-CREATE INDEX rawVolume_pubkey_idx ON rawVolume(pubkey);
-CREATE TABLE rawNumber AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS number
-	FROM field AS f, pub AS p
-	WHERE f.p = 'number' AND p.k = f.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings');
-CREATE INDEX rawNumber_pubkey_idx ON rawNumber(pubkey);
-CREATE TABLE rawPublisher AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS publisher
-	FROM field AS f, pub AS p
-	WHERE f.p = 'publisher' AND p.k = f.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings');
-CREATE INDEX rawPublisher_pubkey_idx ON rawPublisher(pubkey);
-CREATE TABLE rawISBN AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS isbn
-	FROM field AS f, pub AS p
-	WHERE f.p = 'isbn' AND p.k = f.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings');
-CREATE INDEX rawISBN_pubkey_idx ON rawISBN(pubkey);
-CREATE TABLE rawBookTitle AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS booktitle
-	FROM field AS f, pub AS p
-	WHERE f.p = 'booktitle' AND p.k = f.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings');
-CREATE INDEX rawBookTitle_pubkey_idx ON rawBookTitle(pubkey);
-CREATE TABLE rawEditor AS SELECT DISTINCT ON (f.k) f.k AS pubkey, f.v AS editor
-	FROM field AS f, pub AS p
-	WHERE f.p = 'editor' AND p.k = f.k AND (p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p = 'inproceedings');
-CREATE INDEX rawEditor_pubkey_idx ON rawEditor(pubkey);
-*/
-/*
 INSERT INTO Publication (pubkey, title, year) (
-	SELECT t.pubkey, t.title, CAST(y.year AS INT)
-		FROM rawTitle AS t, rawYear AS y
-		WHERE t.pubkey = y.pubkey
-);
-*/
-INSERT INTO Publication (pubkey, title, year) (
-	SELECT p.k, title.v, CAST(year.v AS INT)
+	SELECT DISTINCT ON (p.k) p.k, title.v, CAST(year.v AS INT)
 		FROM pub AS p LEFT OUTER JOIN field as title ON (p.k = title.k AND title.p = 'title')
 			LEFT OUTER JOIN field AS year ON (p.k = year.k AND year.p = 'year')
 		WHERE  p.p = 'article' OR p.p = 'book' OR p.p = 'incollection' OR p.p ='inproceedings'
 );
-/*
 INSERT INTO Article (pubid, journal, month, volume, number) (
-	SELECT p.pubid, j.journal, m.month, v.volume, n.number
-		FROM Publication AS p, rawJournal AS j, rawMonth AS m, rawVolume AS v, rawNumber AS n, pub
-		WHERE p.pubkey = j.pubkey AND p.pubkey = m.pubkey AND p.pubkey = v.pubkey AND p.pubkey = n.pubkey AND p.pubkey = pub.k AND pub.p = 'article'
+	SELECT DISTINCT ON (p.pubid) p.pubid, journal.v, month.v, volume.v, number.v
+		FROM Publication AS p JOIN pub ON (p.pubkey = pub.k AND pub.p = 'article')
+			LEFT OUTER JOIN field AS journal ON (p.pubkey = journal.k AND journal.p = 'journal')
+			LEFT OUTER JOIN field AS month ON (p.pubkey = month.k AND month.p = 'month')
+			LEFT OUTER JOIN field AS volume ON (p.pubkey = volume.k AND volume.p = 'volume')
+			LEFT OUTER JOIN field AS number ON (p.pubkey = number.k AND number.p = 'number')
 );
 INSERT INTO Book (pubid, publisher, isbn) (
-	SELECT p.pubid, pr.publisher, i.isbn
-		FROM Publication AS p, rawPublisher AS pr, rawISBN AS i, pub
-		WHERE p.pubkey = pr.pubkey AND p.pubkey = i.pubkey AND p.pubkey = pub.k AND pub.p = 'book'
+	SELECT DISTINCT ON (p.pubid) p.pubid, publisher.v, isbn.v
+		FROM Publication AS p JOIN pub ON (p.pubkey = pub.k AND pub.p = 'book')
+			LEFT OUTER JOIN field AS publisher ON (p.pubkey = publisher.k AND publisher.p = 'publisher')
+			LEFT OUTER JOIN field AS isbn ON (p.pubkey = isbn.k AND isbn.p = 'isbn')
 );
 INSERT INTO Incollection (pubid, booktitle, publisher, isbn) (
-	SELECT p.pubid, b.booktitle, pr.publisher, i.isbn
-		FROM Publication AS p, rawBookTitle as b, rawPublisher AS pr, rawISBN AS i, pub
-		WHERE p.pubkey = b.pubkey AND p.pubkey = pr.pubkey AND p.pubkey = i.pubkey AND p.pubkey = pub.k AND pub.p = 'incollection'
+	SELECT DISTINCT ON (p.pubid) p.pubid, booktitle.v, publisher.v, isbn.v
+		FROM Publication AS p JOIN pub ON (p.pubkey = pub.k AND pub.p = 'incollection')
+			LEFT OUTER JOIN field AS booktitle ON (p.pubkey = booktitle.k AND booktitle.p = 'booktitle')
+			LEFT OUTER JOIN field AS publisher ON (p.pubkey = publisher.k AND publisher.p = 'publisher')
+			LEFT OUTER JOIN field AS isbn ON (p.pubkey = isbn.k AND isbn.p = 'isbn')
 );
 INSERT INTO Inproceedings (pubid, booktitle, editor) (
-	SELECT p.pubid, b.booktitle, e.editor
-		FROM Publication AS p, rawBookTitle as b, rawEditor AS e, pub
-		WHERE p.pubkey = b.pubkey AND p.pubkey = e.pubkey AND p.pubkey = pub.k AND pub.p = 'inproceedings'
+	SELECT DISTINCT ON (p.pubid) p.pubid, booktitle.v, editor.v
+		FROM Publication AS p JOIN pub ON (p.pubkey = pub.k AND pub.p = 'inproceedings')
+			LEFT OUTER JOIN field AS booktitle ON (p.pubkey = booktitle.k AND booktitle.p = 'booktitle')
+			LEFT OUTER JOIN field AS editor ON (p.pubkey = editor.k AND editor.p = 'editor')
 );
-*/
+--6 Extra credit
+-- resolve conflicts "select * from field where k = 'reference/snam/2014';"
+-- multiple edotors, isbns
+-- for part 3, duplicates removed by DISTINCT ON
