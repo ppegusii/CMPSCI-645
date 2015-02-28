@@ -559,7 +559,6 @@ WITH years AS	(
 --         2020 |          5
 
 --4.5
-*/
 
 WITH 	a_y_cnt AS	(
 						SELECT a.id, a.name, p.year, COUNT(p.pubid) AS y_pub_cnt
@@ -665,6 +664,40 @@ WITH 	a_y_cnt AS	(
 --         2014 | Wei Wang               |       189
 --         2015 | Jun Li                 |        18
 --         2020 | Ayman I. Sabbah        |         1
+
+*/
+--4.6
+
+SELECT a.name AS author, cc.count AS collab_cnt
+	FROM	(
+				SELECT ad.id, COUNT(c.pubid)
+					FROM authored AS ad JOIN authored AS c ON (ad.pubid = c.pubid AND ad.id != c.id)
+					GROUP BY ad.id
+			) AS cc JOIN author AS a ON (cc.id = a.id)
+	ORDER BY cc.count DESC
+	LIMIT 20;
+--      author      | collab_cnt 
+--------------------+------------
+-- Wen Gao          |       3024
+-- Wei Wang         |       2860
+-- Wei Liu          |       2731
+-- Yan Zhang        |       2601
+-- H. Vincent Poor  |       2479
+-- Lei Wang         |       2240
+-- Jing Li          |       2217
+-- Yang Yang        |       2207
+-- Paul M. Thompson |       2154
+-- Philip S. Yu     |       2140
+-- Jiawei Han       |       2139
+-- Yu Zhang         |       2101
+-- Hai Jin          |       2090
+-- Thomas S. Huang  |       2075
+-- Arthur W. Toga   |       2021
+-- Leonard Barolli  |       2013
+-- Luca Benini      |       1995
+-- Wei Zhang        |       1994
+-- Francky Catthoor |       1985
+-- Piet Demeester   |       1961
 
 --6 Extra credit
 ---- resolve conflicts "select * from field where k = 'reference/snam/2014';"
