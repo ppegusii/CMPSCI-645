@@ -1,6 +1,12 @@
 # data directory
 data/
 
+# temp directory
+tmp/
+
+#Vim
+*.swp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

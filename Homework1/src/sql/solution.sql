@@ -461,7 +461,6 @@ SELECT sao.name AS author
 -- Rasmus Pagh
 -- Vassos Hadzilacos
 -- Giuseppe De Giacomo
-*/
 
 --4.4
 
@@ -558,6 +557,114 @@ WITH years AS	(
 --         2014 |     217591
 --         2015 |      13876
 --         2020 |          5
+
+--4.5
+*/
+
+WITH 	a_y_cnt AS	(
+						SELECT a.id, a.name, p.year, COUNT(p.pubid) AS y_pub_cnt
+							FROM Author AS a JOIN Authored AS ad ON (a.id = ad.id)
+								JOIN Publication AS p ON (ad.pubid = p.pubid AND p.year IS NOT NULL)
+							GROUP BY a.id, p.year
+					),
+		a_d_cnt AS	(
+						SELECT cur.name, cur.year, SUM(dec.y_pub_cnt) AS d_pub_cnt
+							FROM a_y_cnt AS cur JOIN a_y_cnt AS dec ON (cur.id = dec.id AND cur.year <= dec.year AND cur.year > dec.year -10)
+							GROUP BY cur.name, cur.year
+					)
+	--cannot get name without GROUP BY name or some aggregation, which would make the query incorrect
+	--workaround:
+	--http://stackoverflow.com/questions/19601948/must-appear-in-the-group-by-clause-or-be-used-in-an-aggregate-function
+	SELECT DISTINCT ON (adc.year) adc.year AS decade_start, adc.name AS author_name, dmax.max_pub_cnt AS pub_count
+		FROM	(
+					SELECT adc.year, MAX(adc.d_pub_cnt) AS max_pub_cnt
+						FROM a_d_cnt AS adc
+						GROUP BY adc.year
+				) AS dmax JOIN a_d_cnt AS adc ON (dmax.year = adc.year AND dmax.max_pub_cnt = adc.d_pub_cnt)
+		ORDER BY adc.year;
+-- decade_start |      author_name       | pub_count 
+----------------+------------------------+-----------
+--         1936 | W. V. Quine            |        12
+--         1937 | W. V. Quine            |        12
+--         1938 | W. V. Quine            |        12
+--         1939 | J. C. C. McKinsey      |        10
+--         1940 | W. V. Quine            |        10
+--         1941 | Frederic Brenton Fitch |        10
+--         1942 | Frederic Brenton Fitch |        10
+--         1943 | Nelson Goodman         |         5
+--         1944 | Frederic Brenton Fitch |        10
+--         1945 | W. V. Quine            |        14
+--         1946 | W. V. Quine            |        13
+--         1947 | W. V. Quine            |        13
+--         1948 | Hao Wang               |        14
+--         1949 | John R. Myhill         |        11
+--         1950 | Hao Wang               |        14
+--         1951 | John R. Myhill         |         9
+--         1952 | Hao Wang               |        11
+--         1953 | Hao Wang               |        10
+--         1954 | David Middleton        |        14
+--         1955 | Boleslaw Sobocinski    |        32
+--         1956 | Nelson M. Blachman     |        16
+--         1957 | Saul Gorn              |        29
+--         1958 | Seymour Ginsburg       |        24
+--         1959 | Seymour Ginsburg       |        30
+--         1960 | Henry C. Thacher Jr.   |        37
+--         1961 | Henry C. Thacher Jr.   |        35
+--         1962 | Seymour Ginsburg       |        34
+--         1963 | Seymour Ginsburg       |        37
+--         1964 | Seymour Ginsburg       |        37
+--         1965 | Seymour Ginsburg       |        41
+--         1966 | Jeffrey D. Ullman      |        67
+--         1967 | Jeffrey D. Ullman      |        74
+--         1968 | Jeffrey D. Ullman      |        79
+--         1969 | Jeffrey D. Ullman      |        74
+--         1970 | Jeffrey D. Ullman      |        77
+--         1971 | Grzegorz Rozenberg     |        93
+--         1972 | Grzegorz Rozenberg     |       114
+--         1973 | Grzegorz Rozenberg     |       125
+--         1974 | Azriel Rosenfeld       |       139
+--         1975 | Azriel Rosenfeld       |       148
+--         1976 | Azriel Rosenfeld       |       149
+--         1977 | Azriel Rosenfeld       |       151
+--         1978 | Azriel Rosenfeld       |       151
+--         1979 | Azriel Rosenfeld       |       157
+--         1980 | Azriel Rosenfeld       |       161
+--         1981 | Azriel Rosenfeld       |       172
+--         1982 | Azriel Rosenfeld       |       164
+--         1983 | Azriel Rosenfeld       |       148
+--         1984 | Micha Sharir           |       156
+--         1985 | Micha Sharir           |       174
+--         1986 | Micha Sharir           |       184
+--         1987 | Micha Sharir           |       192
+--         1988 | Micha Sharir           |       196
+--         1989 | Kang G. Shin           |       206
+--         1990 | Kang G. Shin           |       215
+--         1991 | Kang G. Shin           |       216
+--         1992 | Toshio Fukuda          |       231
+--         1993 | Thomas S. Huang        |       263
+--         1994 | Thomas S. Huang        |       289
+--         1995 | Thomas S. Huang        |       316
+--         1996 | Edwin R. Hancock       |       345
+--         1997 | Wen Gao                |       376
+--         1998 | Wen Gao                |       439
+--         1999 | Wen Gao                |       502
+--         2000 | Wen Gao                |       561
+--         2001 | Wen Gao                |       608
+--         2002 | H. Vincent Poor        |       660
+--         2003 | H. Vincent Poor        |       737
+--         2004 | H. Vincent Poor        |       814
+--         2005 | H. Vincent Poor        |       881
+--         2006 | Wei Wang               |       840
+--         2007 | Wei Wang               |       804
+--         2008 | Wei Wang               |       763
+--         2009 | Wei Wang               |       710
+--         2010 | Wei Wang               |       626
+--         2011 | Wei Wang               |       536
+--         2012 | Wei Wang               |       445
+--         2013 | Wei Wang               |       341
+--         2014 | Wei Wang               |       189
+--         2015 | Jun Li                 |        18
+--         2020 | Ayman I. Sabbah        |         1
 
 --6 Extra credit
 ---- resolve conflicts "select * from field where k = 'reference/snam/2014';"
