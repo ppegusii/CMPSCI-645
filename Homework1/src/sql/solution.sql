@@ -665,7 +665,6 @@ WITH 	a_y_cnt AS	(
 --         2015 | Jun Li                 |        18
 --         2020 | Ayman I. Sabbah        |         1
 
-*/
 --4.6
 
 SELECT a.name AS author, cc.count AS collab_cnt
@@ -698,6 +697,73 @@ SELECT a.name AS author, cc.count AS collab_cnt
 -- Wei Zhang        |       1994
 -- Francky Catthoor |       1985
 -- Piet Demeester   |       1961
+
+--4.7
+
+SELECT inst, COUNT(pubid)
+	FROM	(
+				SELECT DISTINCT SUBSTRING(a.homepage FROM '//([^/]*)/') AS inst, p.pubid
+					FROM Author AS a JOIN Authored AS ad ON (a.id = ad.id AND a.homepage IS NOT NULL)
+						JOIN Publication AS p ON (ad.pubid = p.pubid AND p.pubkey LIKE '%/pvldb/%')
+			) AS inst_pub
+	GROUP BY inst
+	ORDER BY count DESC
+	LIMIT 20;
+--              inst               | count 
+-----------------------------------+-------
+-- dl.acm.org                      |   160
+-- scholar.google.com              |    82
+-- research.microsoft.com          |    42
+-- www.research.att.com            |    38
+-- www.comp.nus.edu.sg             |    35
+-- www.cs.ucsb.edu                 |    24
+-- www.cs.washington.edu           |    21
+-- www.cs.uwaterloo.ca             |    19
+-- cs.au.dk                        |    19
+-- www-db.stanford.edu             |    18
+-- www.eecs.umich.edu              |    18
+-- www.cs.wisc.edu                 |    15
+-- www.inf.ethz.ch                 |    15
+-- www.cs.ucr.edu                  |    14
+-- db.cs.berkeley.edu              |    14
+-- homepages.cwi.nl                |    14
+-- www.cs.umass.edu                |    14
+-- academic.research.microsoft.com |    14
+-- www.cs.cornell.edu              |    14
+-- www.cs.umd.edu                  |    13
+*/
+
+SELECT inst, COUNT(pubid)
+	FROM	(
+				SELECT DISTINCT SUBSTRING(a.homepage FROM '//([^/]*)/') AS inst, p.pubid
+					FROM Author AS a JOIN Authored AS ad ON (a.id = ad.id AND a.homepage IS NOT NULL)
+						JOIN Publication AS p ON (ad.pubid = p.pubid AND p.pubkey LIKE '%/sensys/%')
+			) AS inst_pub
+	GROUP BY inst
+	ORDER BY count DESC
+	LIMIT 20;
+--            inst            | count 
+------------------------------+-------
+-- dl.acm.org                 |    39
+-- www.cs.virginia.edu        |    39
+-- nesl.ee.ucla.edu           |    31
+-- www-users.cs.umn.edu       |    28
+-- http.cs.berkeley.edu       |    27
+-- research.microsoft.com     |    16
+-- pollux.usc.edu             |    15
+-- lass.cs.umass.edu          |    14
+-- www.cs.dartmouth.edu       |    14
+-- www.eecs.harvard.edu       |    12
+-- buzzing.cs.berkeley.edu    |    12
+-- www.cs.umass.edu           |    12
+-- nms.csail.mit.edu          |    11
+-- www.isi.edu                |    10
+-- scholar.google.com         |     9
+-- www.tik.ee.ethz.ch         |     8
+-- people.csail.mit.edu       |     8
+-- www.cse.unsw.edu.au        |     8
+-- www.dcg.ethz.ch            |     5
+-- seattle.intel-research.net |     5
 
 --6 Extra credit
 ---- resolve conflicts "select * from field where k = 'reference/snam/2014';"
