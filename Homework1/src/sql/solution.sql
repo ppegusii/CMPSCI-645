@@ -731,7 +731,6 @@ SELECT inst, COUNT(pubid)
 -- academic.research.microsoft.com |    14
 -- www.cs.cornell.edu              |    14
 -- www.cs.umd.edu                  |    13
-*/
 
 SELECT inst, COUNT(pubid)
 	FROM	(
@@ -765,6 +764,30 @@ SELECT inst, COUNT(pubid)
 -- www.dcg.ethz.ch            |     5
 -- seattle.intel-research.net |     5
 
+--5
+
+*/
+SELECT collab_cnt, COUNT(id) AS author_cnt
+	FROM	(
+				SELECT ad.id, COUNT(c.id) AS collab_cnt
+					FROM Authored AS ad JOIN Authored AS c ON (ad.pubid = c.pubid AND ad.id != c.id)
+					GROUP BY ad.id
+			) AS author_collabcnt
+	GROUP BY collab_cnt
+	ORDER BY collab_cnt;
+
+--\copy (SELECT collab_cnt, COUNT(id) AS author_cnt FROM (SELECT ad.id, COUNT(c.id) AS collab_cnt FROM Authored AS ad JOIN Authored AS c ON (ad.pubid = c.pubid AND ad.id != c.id) GROUP BY ad.id) AS author_collabcnt GROUP BY collab_cnt ORDER BY collab_cnt) TO '/home/patrick/storage/github/CMPSCI-645/Homework1/data/collabcounts.csv' WITH (FORMAT CSV)
+
+SELECT pub_cnt, COUNT(id) AS author_cnt
+	FROM 	(
+				SELECT ad.id, COUNT(ad.pubid) AS pub_cnt
+					FROM Authored AS ad
+					GROUP BY ad.id
+			) AS author_pubcnt
+	GROUP BY pub_cnt
+	ORDER BY pub_cnt;
+
+--\copy (SELECT pub_cnt, COUNT(id) AS author_cnt FROM (SELECT ad.id, COUNT(ad.pubid) AS pub_cnt FROM Authored AS ad GROUP BY ad.id) AS author_pubcnt GROUP BY pub_cnt ORDER BY pub_cnt) TO '/home/patrick/storage/github/CMPSCI-645/Homework1/data/pubcounts.csv' WITH (FORMAT CSV)
 --6 Extra credit
 ---- resolve conflicts "select * from field where k = 'reference/snam/2014';"
 -- multiple edotors, isbns
