@@ -1,4 +1,3 @@
-/*
 -- 1.3
 
 -- drop indices
@@ -27,13 +26,11 @@ CREATE TABLE Author(
 );
 CREATE TABLE Publication(
 	pubid SERIAL PRIMARY KEY,
-	--pubkey TEXT UNIQUE NOT NULL,
 	pubkey TEXT NOT NULL,
 	title TEXT,
 	year INTEGER
 );
 CREATE TABLE Article(
-	--pubid INTEGER NOT NULL REFERENCES Publication(pubid),
 	pubid INTEGER NOT NULL,
 	journal TEXT,
 	month TEXT,
@@ -41,37 +38,35 @@ CREATE TABLE Article(
 	number TEXT
 );
 CREATE TABLE Book(
-	--pubid INTEGER NOT NULL REFERENCES Publication(pubid),
 	pubid INTEGER NOT NULL,
 	publisher TEXT,
 	isbn TEXT
 );
 CREATE TABLE Incollection(
-	--pubid INTEGER NOT NULL REFERENCES Publication(pubid),
 	pubid INTEGER NOT NULL,
 	booktitle TEXT,
 	publisher TEXT,
 	isbn TEXT
 );
 CREATE TABLE Inproceedings(
-	--pubid INTEGER NOT NULL REFERENCES Publication(pubid),
 	pubid INTEGER NOT NULL,
 	booktitle TEXT,
 	editor TEXT
 );
 CREATE TABLE Authored(
-	--id INTEGER NOT NULL REFERENCES Author(id),
-	--pubid INTEGER NOT NULL REFERENCES Publication(pubid)
 	id INTEGER NOT NULL,
 	pubid INTEGER NOT NULL
 );
 
 -- 2.2
 
+CREATE UNIQUE INDEX pub_k_idx ON Pub(k);
+CREATE INDEX pub_p_idx ON Pub(p);
+CREATE INDEX field_k_idx ON Field(k);
+
 SELECT p AS publication_type, COUNT(*)
 	FROM pub
 	GROUP BY p;
-*/
 --  publication_type |  count  
 -- ------------------+---------
 --  www              | 1521335
@@ -82,36 +77,6 @@ SELECT p AS publication_type, COUNT(*)
 --  inproceedings    | 1562008
 --  proceedings      |   25625
 --  mastersthesis    |       9
-/*
-WITH	pub_field_exist AS	(
-								SELECT DISTINCT pub.p AS pt, field.p AS ft
-									FROM pub, field
-									WHERE pub.k = field.k
-							),
-		field_type AS		(
-								SELECT DISTINCT field.p AS ft
-									FROM field
-							),
-		pub_type AS			(
-								SELECT DISTINCT pub.p AS pt
-									FROM pub
-							)
-	SELECT field_type.ft AS field_name
-	FROM field_type
-	WHERE NOT EXISTS	((
-							SELECT pub_type.pt, field_type.ft
-								FROM pub_type
-						)
-						EXCEPT
-						(
-							SELECT *
-								FROM pub_field_exist
-								WHERE pub_field_exist.ft = field_type.ft
-						));
--- This is faster than the direct query below. The below query queries for
--- all field types twice.
-*/
-/*
 SELECT field_in_all_pub.ft as field_name
 	FROM	(
 				(
@@ -148,8 +113,6 @@ SELECT field_in_all_pub.ft as field_name
 								) AS pub_field_not_in_cross
 				)
 			) AS field_in_all_pub;
-*/
-/*
 --  field_name 
 -- ------------
 --  ee
@@ -157,9 +120,6 @@ SELECT field_in_all_pub.ft as field_name
 --  year
 --  url
 --  title
-CREATE UNIQUE INDEX pub_k_idx ON Pub(k);
-CREATE INDEX pub_p_idx ON Pub(p);
-CREATE INDEX field_k_idx ON Field(k);
 
 --3
 
@@ -187,6 +147,7 @@ INSERT INTO Article (pubid, journal, month, volume, number) (
 			LEFT OUTER JOIN field AS number ON (p.pubkey = number.k AND number.p = 'number')
 );
 CREATE UNIQUE INDEX article_pubid_idx ON Article(pubid);
+ALTER TABLE Article ADD FOREIGN KEY(pubid) REFERENCES Publication(pubid);
 INSERT INTO Book (pubid, publisher, isbn) (
 	SELECT DISTINCT ON (p.pubid) p.pubid, publisher.v, isbn.v
 		FROM Publication AS p JOIN pub ON (p.pubkey = pub.k AND pub.p = 'book')
@@ -194,6 +155,7 @@ INSERT INTO Book (pubid, publisher, isbn) (
 			LEFT OUTER JOIN field AS isbn ON (p.pubkey = isbn.k AND isbn.p = 'isbn')
 );
 CREATE UNIQUE INDEX book_pubid_idx ON Book(pubid);
+ALTER TABLE Book ADD FOREIGN KEY(pubid) REFERENCES Publication(pubid);
 INSERT INTO Incollection (pubid, booktitle, publisher, isbn) (
 	SELECT DISTINCT ON (p.pubid) p.pubid, booktitle.v, publisher.v, isbn.v
 		FROM Publication AS p JOIN pub ON (p.pubkey = pub.k AND pub.p = 'incollection')
@@ -202,6 +164,7 @@ INSERT INTO Incollection (pubid, booktitle, publisher, isbn) (
 			LEFT OUTER JOIN field AS isbn ON (p.pubkey = isbn.k AND isbn.p = 'isbn')
 );
 CREATE UNIQUE INDEX incollection_pubid_idx ON Incollection(pubid);
+ALTER TABLE Incollection ADD FOREIGN KEY(pubid) REFERENCES Publication(pubid);
 INSERT INTO Inproceedings (pubid, booktitle, editor) (
 	SELECT DISTINCT ON (p.pubid) p.pubid, booktitle.v, editor.v
 		FROM Publication AS p JOIN pub ON (p.pubkey = pub.k AND pub.p = 'inproceedings')
@@ -209,12 +172,15 @@ INSERT INTO Inproceedings (pubid, booktitle, editor) (
 			LEFT OUTER JOIN field AS editor ON (p.pubkey = editor.k AND editor.p = 'editor')
 );
 CREATE UNIQUE INDEX inproceedings_pubid_idx ON Inproceedings(pubid);
+ALTER TABLE Inproceedings ADD FOREIGN KEY(pubid) REFERENCES Publication(pubid);
 INSERT INTO Authored (id, pubid) (
 	SELECT DISTINCT a.id, p.pubid
 		FROM Author AS a JOIN field AS f ON (a.name = f.v AND f.p = 'author')
 			JOIN Publication AS p ON (p.pubkey = f.k)
 );
 CREATE UNIQUE INDEX authored_id_pubid_idx ON Authored(id,pubid);
+ALTER TABLE Authored ADD FOREIGN KEY(id) REFERENCES Author(id);
+ALTER TABLE Authored ADD FOREIGN KEY(pubid) REFERENCES Publication(pubid);
 
 --4
 --4.1
@@ -766,7 +732,7 @@ SELECT inst, COUNT(pubid)
 
 --5
 
-*/
+/*
 SELECT collab_cnt, COUNT(id) AS author_cnt
 	FROM	(
 				SELECT ad.id, COUNT(c.id) AS collab_cnt
@@ -775,9 +741,11 @@ SELECT collab_cnt, COUNT(id) AS author_cnt
 			) AS author_collabcnt
 	GROUP BY collab_cnt
 	ORDER BY collab_cnt;
+*/
 
 --\copy (SELECT collab_cnt, COUNT(id) AS author_cnt FROM (SELECT ad.id, COUNT(c.id) AS collab_cnt FROM Authored AS ad JOIN Authored AS c ON (ad.pubid = c.pubid AND ad.id != c.id) GROUP BY ad.id) AS author_collabcnt GROUP BY collab_cnt ORDER BY collab_cnt) TO '/home/patrick/storage/github/CMPSCI-645/Homework1/data/collabcounts.csv' WITH (FORMAT CSV)
 
+/*
 SELECT pub_cnt, COUNT(id) AS author_cnt
 	FROM 	(
 				SELECT ad.id, COUNT(ad.pubid) AS pub_cnt
@@ -786,9 +754,6 @@ SELECT pub_cnt, COUNT(id) AS author_cnt
 			) AS author_pubcnt
 	GROUP BY pub_cnt
 	ORDER BY pub_cnt;
+*/
 
 --\copy (SELECT pub_cnt, COUNT(id) AS author_cnt FROM (SELECT ad.id, COUNT(ad.pubid) AS pub_cnt FROM Authored AS ad GROUP BY ad.id) AS author_pubcnt GROUP BY pub_cnt ORDER BY pub_cnt) TO '/home/patrick/storage/github/CMPSCI-645/Homework1/data/pubcounts.csv' WITH (FORMAT CSV)
---6 Extra credit
----- resolve conflicts "select * from field where k = 'reference/snam/2014';"
--- multiple edotors, isbns
--- for part 3, duplicates removed by DISTINCT ON
